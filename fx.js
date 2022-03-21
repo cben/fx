@@ -15,6 +15,9 @@ module.exports = function start(filename, source, prev = {}) {
   // Contains map from row number to expand path.
   // Example: {0: '', 1: '.foo', 2: '.foo[0]'}
   let index = new Map()
+  // WIP
+  let priorities = new Map()
+  let showFull = false
 
   // Contains expanded paths. Example: ['', '.foo']
   // Empty string represents root path.
@@ -115,7 +118,7 @@ module.exports = function start(filename, source, prev = {}) {
     // Blessed has a bug with resizing the terminal. I tried my best to fix it but was not succeeded.
     // For now exit and print seem like a reasonable alternative, as it not usable after resize.
     // If anyone can fix this bug it will be cool.
-    printJson({expanded})
+    printJson({ expanded })
   })
 
   screen.key(['escape', 'q', 'C-c'], function () {
@@ -314,15 +317,15 @@ module.exports = function start(filename, source, prev = {}) {
     hideStatusBar()
     program.showCursor()
     const [n] = getLine(program.y)
-    
+
     let next
     for (let [i,] of index) {
       if (i > n && (typeof next === 'undefined' || i < next)) {
         next = i
       }
     }
-    
-    
+
+
     if (typeof next !== 'undefined') {
       let y = box.getScreenNumber(next) - box.childBase
       console.error('down:', index, next, y, box.height)
@@ -452,6 +455,12 @@ module.exports = function start(filename, source, prev = {}) {
     render()
   })
 
+  box.key('f', function () {
+    showFull = !showFull
+    // TODO adjust cursor position
+    render()
+  })
+
   /*box.on('click', function (mouse) {
     hideStatusBar()
     const [n, line] = getLine(mouse.y)
@@ -477,7 +486,7 @@ module.exports = function start(filename, source, prev = {}) {
   })
 
   box.key('p', function () {
-    printJson({expanded})
+    printJson({ expanded })
   })
 
   box.key('S-p', function () {
@@ -637,7 +646,7 @@ module.exports = function start(filename, source, prev = {}) {
       return
     }
 
-    const {value: path, done} = findGen.next()
+    const { value: path, done } = findGen.next()
 
     if (done) {
       showStatusBar('Pattern not found')
@@ -696,9 +705,39 @@ module.exports = function start(filename, source, prev = {}) {
     }
   }
 
+  // Narrow down to subset of lines based on priorities.
+  // For debugging, prepend priorities & line numbers.
+  // Returns new [content, index].
+  function abridge(fullContent, fullIndex, priorities) {
+    let fullNum = 0
+    let content = ''
+    let num = 0
+    const index = new Map()
+    for (let line of fullContent.split('\n')) {
+      const path = fullIndex.get(fullNum)
+      console.error('prio[', JSON.stringify(path), '] =', JSON.stringify(priorities.get(path)))
+      if (path !== undefined) {
+        const prio = priorities.get(path)
+        if (prio === undefined || showFull || prio < 10 || prio > 25) {
+          content += `${prio.toString().padStart(2, '0')}p ${fullNum.toString().padStart(3, ' ')}: ${line}\n`
+          index.set(num, path)
+          num++
+        }
+      }
+      fullNum++
+    }
+    console.error('index:', index)
+    return [content, index]
+  }
+
   function render() {
-    let content
-    [content, index] = print(json, {expanded, highlight, currentPath, hidden})
+    // Get unabridged pretty-print.
+    let fullContent, fullIndex // do set top-level `priorities` state.
+    [fullContent, fullIndex, priorities] = print(json, { expanded, highlight, currentPath, hidden })
+    
+    // Then narrow down to fit available space (TODO).
+    let content // do set top-level `index` state.
+    [content, index] = abridge(fullContent, fullIndex, priorities)
 
     if (typeof content === 'undefined') {
       content = 'undefined'

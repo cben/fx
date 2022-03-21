@@ -17,15 +17,18 @@ function format(value, style, highlightStyle, regexp, transform = x => x) {
 }
 
 function print(input, options = {}) {
-  console.error('print:', input, options)
+  console.error('print: options =', options)
 
   const { expanded, highlight, currentPath, hidden = new Set() } = options
   const index = new Map()
+  const priorities = new Map()
   let row = 0
   let skippedLines = false
 
   function doPrint(v, path = '') {
     index.set(row, path)
+    priorities.set(path, path.length)
+    //console.error('doPrint path=', path, '=> priorities=', priorities)
 
     // Code for highlighting parts become cumbersome.
     // Maybe we should refactor this part.
@@ -138,7 +141,7 @@ function print(input, options = {}) {
     return JSON.stringify(v, null, config.space)
   }
 
-  return [doPrint(input), index]
+  return [doPrint(input), index, priorities]
 }
 
 module.exports = print
