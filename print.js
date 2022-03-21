@@ -25,9 +25,16 @@ function print(input, options = {}) {
   let row = 0
   let skippedLines = false
 
-  function doPrint(v, path = '') {
+  function doPrint(v, paths = []) {
+    const path = paths.join('')
     index.set(row, path)
-    priorities.set(path, path.length)
+    const prio = path.length // TODO
+    priorities.set(path, prio)
+    for (let i = paths.length - 1; i >= 0; i--) {
+      const ancestor = paths.slice(0, i).join('')
+      console.error('ancestor:', paths, ancestor)
+      priorities.set(ancestor, Math.max(priorities.get(ancestor), prio))
+    }
     //console.error('doPrint path=', path, '=> priorities=', priorities)
 
     // Code for highlighting parts become cumbersome.
@@ -92,11 +99,12 @@ function print(input, options = {}) {
           let i = 0
           for (let item of v) {
             const value = typeof item === 'undefined' ? null : item // JSON.stringify compatibility
-            const itemPath = path + '[' + i + ']'
+            const itemPaths = [...paths, '[' + i + ']']
+            const itemPath = itemPaths.join('')
             if (hidden.has(itemPath)) {
               skippedLines = true
             } else {
-              output += markSkipped(indent(doPrint(value, itemPath), config.space))
+              output += markSkipped(indent(doPrint(value, itemPaths), config.space))
               output += i < len - 1 ? config.comma(',') + eol() : '  '
               //output += 
             }
@@ -121,11 +129,12 @@ function print(input, options = {}) {
           output += eol()
           let i = 0
           for (let [key, value] of entries) {
-            const itemPath = path + '.' + key
+            const itemPaths = [...paths, '.' + key]
+            const itemPath = itemPaths.join('')
             if (hidden.has(itemPath)) {
               skippedLines = true
             } else {
-              const part = formatText(key, config.key, itemPath) + config.colon(':') + ' ' + doPrint(value, itemPath)
+              const part = formatText(key, config.key, itemPath) + config.colon(':') + ' ' + doPrint(value, itemPaths)
               output += markSkipped(indent(part, config.space))
               output += i < len - 1 ? config.comma(',') + eol() : '  '
               //output += eol()

@@ -733,7 +733,7 @@ module.exports = function start(filename, source, prev = {}) {
   function render() {
     // Get unabridged pretty-print.
     let fullContent, fullIndex // do set top-level `priorities` state.
-    [fullContent, fullIndex, priorities] = print(json, { expanded, highlight, currentPath, hidden })
+    [fullContent, fullIndex, priorities] = print(json, { expanded, highlight, currentPath })
     
     // Then narrow down to fit available space (TODO).
     let content // do set top-level `index` state.
