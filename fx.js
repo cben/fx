@@ -19,6 +19,8 @@ module.exports = function start(filename, source, prev = {}) {
   let priorities = new Map()
   // TODO fit optimal amount to screen.  For now tweak manually.
   let priorityThreshold = 0
+  // WIP fake cursor (in unabridged fullContent lines)
+  let focus = 0
 
   // Contains expanded paths. Example: ['', '.foo']
   // Empty string represents root path.
@@ -475,6 +477,16 @@ module.exports = function start(filename, source, prev = {}) {
     render()
   })
 
+  box.key('[', function() {
+    focus--
+    render()
+  })
+
+  box.key(']', function() {
+    focus++
+    render()
+  })
+
   /*box.on('click', function (mouse) {
     hideStatusBar()
     const [n, line] = getLine(mouse.y)
@@ -740,6 +752,9 @@ module.exports = function start(filename, source, prev = {}) {
           if (fullNum > prevShownFullNum + 1) {
             prefix = prefix.replace(/ /g, '\u203E') // ‾ OVERLINE
           }
+          if (fullNum === focus) {
+            prefix = prefix.replace(':', '🠊') // U+1F80A RIGHTWARDS ARROW WITH LARGE TRIANGLE ARROWHEAD
+          }
           content += `${prefix}${line}\n`
           index.set(num, path)
           prevShownFullNum = fullNum
@@ -748,14 +763,14 @@ module.exports = function start(filename, source, prev = {}) {
       }
       fullNum++
     }
-    console.error('index:', index)
+    //console.error('index:', index)
     return [content, index]
   }
 
   function render() {
     // Get unabridged pretty-print.
     let fullContent, fullIndex // do set top-level `priorities` state.
-    [fullContent, fullIndex, priorities] = print(json, { expanded, highlight, currentPath })
+    [fullContent, fullIndex, priorities] = print(json, { expanded, highlight, currentPath, focus })
     
     // Then narrow down to fit available space (TODO).
     let content // do set top-level `index` state.

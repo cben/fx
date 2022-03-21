@@ -22,7 +22,7 @@ function format(value, style, highlightStyle, regexp, callbackIfMatch, transform
 function print(input, options = {}) {
   console.error('print: options =', options)
 
-  const { expanded, highlight, currentPath, hidden = new Set() } = options
+  const { expanded, highlight, currentPath, hidden = new Set(), focus } = options
   const index = new Map()
   const priorities = new Map()
   let row = 0
@@ -33,6 +33,7 @@ function print(input, options = {}) {
     index.set(row, path)
 
     priorities.set(path, 0)
+
     const addPrio = (bump) => {
       const newPrio = priorities.get(path) + bump
       console.error('addPrio @', path, priorities.get(path), '+', bump, '=', newPrio)
@@ -46,6 +47,11 @@ function print(input, options = {}) {
         console.error('ancestor of', path, ':', ancestor, '<-', newAncestorPrio)
         priorities.set(ancestor, newAncestorPrio)
       }
+    }
+
+    const distFromFocus = Math.abs(row - focus)
+    if (distFromFocus <= 10) {
+      addPrio(15 - distFromFocus)
     }
 
     const isCurrent = currentPath === path
