@@ -725,6 +725,8 @@ module.exports = function start(filename, source, prev = {}) {
   // Returns new [content, index].
   function abridge(fullContent, fullIndex, priorities) {
     let fullNum = 0
+    let prevShownFullNum = 0
+    // following vars refer to abridged output
     let content = ''
     let num = 0
     const index = new Map()
@@ -734,8 +736,13 @@ module.exports = function start(filename, source, prev = {}) {
       if (path !== undefined) {
         const prio = priorities.get(path)
         if (prio === undefined || prio >= priorityThreshold) {
-          content += `${prio.toString().padStart(2, ' ')}p ${fullNum.toString().padStart(3, ' ')}: ${line}\n`
+          let prefix = `${prio.toString().padStart(2, ' ')}p ${fullNum.toString().padStart(3, ' ')}:  `
+          if (fullNum > prevShownFullNum + 1) {
+            prefix = prefix.replace(/ /g, '\u203E') // ‾ OVERLINE
+          }
+          content += `${prefix}${line}\n`
           index.set(num, path)
+          prevShownFullNum = fullNum
           num++
         }
       }
