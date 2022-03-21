@@ -3,6 +3,7 @@ const indent = require('indent-string')
 const config = require('./config')
 
 function format(value, style, highlightStyle, regexp, transform = x => x) {
+  console.error('  format:', value)
   if (!regexp) {
     return style(transform(value))
   }
@@ -16,9 +17,12 @@ function format(value, style, highlightStyle, regexp, transform = x => x) {
 }
 
 function print(input, options = {}) {
-  const {expanded, highlight, currentPath} = options
+  console.error('print:', input, options)
+
+  const { expanded, highlight, currentPath, hidden = new Set() } = options
   const index = new Map()
   let row = 0
+  let skippedLines = false
 
   function doPrint(v, path = '') {
     index.set(row, path)
@@ -34,7 +38,18 @@ function print(input, options = {}) {
 
     const eol = () => {
       row++
+      skippedLines = false
       return '\n'
+    }
+
+    const markSkipped = (text) => {
+      if (!skippedLines) {
+        return text
+      }
+      // KLUDGE: rewrite leading line of already formatted text.
+      const leadingSpaces = text.search(/\S/)
+      const newPrefix = '\u203E'.repeat(Math.max(leadingSpaces, 1)) // ‾ OVERLINE
+      return text.replace(/^\s*/, newPrefix) 
     }
 
     if (typeof v === 'undefined') {
@@ -74,14 +89,20 @@ function print(input, options = {}) {
           let i = 0
           for (let item of v) {
             const value = typeof item === 'undefined' ? null : item // JSON.stringify compatibility
-            output += indent(doPrint(value, path + '[' + i + ']'), config.space)
-            output += i++ < len - 1 ? config.comma(',') : ''
-            output += eol()
+            const itemPath = path + '[' + i + ']'
+            if (hidden.has(itemPath)) {
+              skippedLines = true
+            } else {
+              output += markSkipped(indent(doPrint(value, itemPath), config.space))
+              output += i < len - 1 ? config.comma(',') + eol() : '  '
+              //output += 
+            }
+            i++
           }
         }
       }
 
-      return output + config.bracket(']')
+      return output + config.bracket(markSkipped(']'))
     }
 
     if (typeof v === 'object' && v.constructor === Object) {
@@ -97,15 +118,21 @@ function print(input, options = {}) {
           output += eol()
           let i = 0
           for (let [key, value] of entries) {
-            const part = formatText(key, config.key, path + '.' + key) + config.colon(':') + ' ' + doPrint(value, path + '.' + key)
-            output += indent(part, config.space)
-            output += i++ < len - 1 ? config.comma(',') : ''
-            output += eol()
+            const itemPath = path + '.' + key
+            if (hidden.has(itemPath)) {
+              skippedLines = true
+            } else {
+              const part = formatText(key, config.key, itemPath) + config.colon(':') + ' ' + doPrint(value, itemPath)
+              output += markSkipped(indent(part, config.space))
+              output += i < len - 1 ? config.comma(',') + eol() : '  '
+              //output += eol()
+            }
+            i++
           }
         }
       }
 
-      return output + config.bracket('}')
+      return output + config.bracket(markSkipped('}'))
     }
 
     return JSON.stringify(v, null, config.space)

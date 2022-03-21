@@ -20,6 +20,8 @@ module.exports = function start(filename, source, prev = {}) {
   // Empty string represents root path.
   const expanded = prev.expanded || new Set()
   expanded.add('')
+  // Contains paths skipped entirely from display.
+  const hidden = prev.hidden || new Set()
 
   // Current filter code.
   let currentCode = null
@@ -312,16 +314,18 @@ module.exports = function start(filename, source, prev = {}) {
     hideStatusBar()
     program.showCursor()
     const [n] = getLine(program.y)
-
+    
     let next
     for (let [i,] of index) {
       if (i > n && (typeof next === 'undefined' || i < next)) {
         next = i
       }
     }
-
+    
+    
     if (typeof next !== 'undefined') {
       let y = box.getScreenNumber(next) - box.childBase
+      console.error('down:', index, next, y, box.height)
       if (y >= box.height) {
         box.scroll(1)
         screen.render()
@@ -423,7 +427,32 @@ module.exports = function start(filename, source, prev = {}) {
     }
   })
 
+  box.on('mouseover', function (mouse) {
+    const [n, line] = getLine(mouse.y)
+    console.error('mouseover:', n, index.get(n), line)
+  })
+
   box.on('click', function (mouse) {
+    const [n, line] = getLine(mouse.y)
+    const path = index.get(n)
+    hidden.add(path)
+    render()
+  })
+
+
+  box.key('-', function () {
+    const [n, line] = getLine(program.y)
+    const path = index.get(n)
+    hidden.add(path)
+    render()
+  })
+
+  box.key('=', function () {
+    hidden.clear()
+    render()
+  })
+
+  /*box.on('click', function (mouse) {
     hideStatusBar()
     const [n, line] = getLine(mouse.y)
     if (mouse.x >= stringWidth(line)) {
@@ -441,7 +470,7 @@ module.exports = function start(filename, source, prev = {}) {
       expanded.add(path)
     }
     render()
-  })
+  })*/
 
   box.on('scroll', function () {
     hideStatusBar()
@@ -669,7 +698,7 @@ module.exports = function start(filename, source, prev = {}) {
 
   function render() {
     let content
-    [content, index] = print(json, {expanded, highlight, currentPath})
+    [content, index] = print(json, {expanded, highlight, currentPath, hidden})
 
     if (typeof content === 'undefined') {
       content = 'undefined'
