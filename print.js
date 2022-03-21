@@ -2,13 +2,16 @@
 const indent = require('indent-string')
 const config = require('./config')
 
-function format(value, style, highlightStyle, regexp, transform = x => x) {
+function format(value, style, highlightStyle, regexp, callbackIfMatch, transform = x => x) {
   console.error('  format:', value)
   if (!regexp) {
     return style(transform(value))
   }
   const marked = value
     .replace(regexp, s => '<highlight>' + s + '<highlight>')
+  if (marked !== value) {
+    callbackIfMatch()
+  }
 
   return transform(marked)
     .split(/<highlight>/g)
@@ -28,22 +31,35 @@ function print(input, options = {}) {
   function doPrint(v, paths = []) {
     const path = paths.join('')
     index.set(row, path)
-    const prio = path.length // TODO
-    priorities.set(path, prio)
-    for (let i = paths.length - 1; i >= 0; i--) {
-      const ancestor = paths.slice(0, i).join('')
-      console.error('ancestor:', paths, ancestor)
-      priorities.set(ancestor, Math.max(priorities.get(ancestor), prio))
+
+    priorities.set(path, 0)
+    const addPrio = (bump) => {
+      const newPrio = priorities.get(path) + bump
+      console.error('addPrio @', path, priorities.get(path), '+', bump, '=', newPrio)
+      priorities.set(path, newPrio)
+
+      // TODO split ancestor bumping to separate pass.
+      // Having it here only works correctly for positive bumps.
+      for (let i = paths.length - 1; i >= 0; i--) {
+        const ancestor = paths.slice(0, i).join('')
+        const newAncestorPrio = Math.max(priorities.get(ancestor), newPrio)
+        console.error('ancestor of', path, ':', ancestor, '<-', newAncestorPrio)
+        priorities.set(ancestor, newAncestorPrio)
+      }
     }
-    //console.error('doPrint path=', path, '=> priorities=', priorities)
+
+    const isCurrent = currentPath === path
+    const bumpPriorityIfMatch = () => {
+      addPrio(isCurrent ? 20 : 10)
+    }
 
     // Code for highlighting parts become cumbersome.
     // Maybe we should refactor this part.
-    const highlightStyle = (currentPath === path) ? config.highlightCurrent : config.highlight
-    const formatStyle = (v, style) => format(v, style, highlightStyle, highlight)
+    const highlightStyle = isCurrent ? config.highlightCurrent : config.highlight
+    const formatStyle = (v, style) => format(v, style, highlightStyle, highlight, bumpPriorityIfMatch)
     const formatText = (v, style, path) => {
-      const highlightStyle = (currentPath === path) ? config.highlightCurrent : config.highlight
-      return format(v, style, highlightStyle, highlight, JSON.stringify)
+      const highlightStyle = isCurrent ? config.highlightCurrent : config.highlight
+      return format(v, style, highlightStyle, highlight, bumpPriorityIfMatch, JSON.stringify)
     }
 
     const eol = () => {
@@ -59,7 +75,7 @@ function print(input, options = {}) {
       // KLUDGE: rewrite leading line of already formatted text.
       const leadingSpaces = text.search(/\S/)
       const newPrefix = '\u203E'.repeat(Math.max(leadingSpaces, 1)) // ‾ OVERLINE
-      return text.replace(/^\s*/, newPrefix) 
+      return text.replace(/^\s*/, newPrefix)
     }
 
     if (typeof v === 'undefined') {

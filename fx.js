@@ -17,7 +17,8 @@ module.exports = function start(filename, source, prev = {}) {
   let index = new Map()
   // WIP
   let priorities = new Map()
-  let showFull = false
+  // TODO fit optimal amount to screen.  For now tweak manually.
+  let priorityThreshold = 0
 
   // Contains expanded paths. Example: ['', '.foo']
   // Empty string represents root path.
@@ -435,6 +436,7 @@ module.exports = function start(filename, source, prev = {}) {
     console.error('mouseover:', n, index.get(n), line)
   })
 
+  /*
   box.on('click', function (mouse) {
     const [n, line] = getLine(mouse.y)
     const path = index.get(n)
@@ -442,21 +444,33 @@ module.exports = function start(filename, source, prev = {}) {
     render()
   })
 
-
   box.key('-', function () {
     const [n, line] = getLine(program.y)
     const path = index.get(n)
     hidden.add(path)
     render()
   })
-
+  
   box.key('=', function () {
     hidden.clear()
     render()
   })
+  */
 
-  box.key('f', function () {
-    showFull = !showFull
+  box.key('-', function () {
+    priorityThreshold--
+    // TODO adjust cursor position
+    render()
+  })
+
+  box.key(['+', '='], function () {
+    priorityThreshold++
+    // TODO adjust cursor position
+    render()
+  })
+
+  box.key('0', function() {
+    priorityThreshold = 0
     // TODO adjust cursor position
     render()
   })
@@ -658,6 +672,7 @@ module.exports = function start(filename, source, prev = {}) {
       }
       render()
 
+      return // DON'T SCROLL
       for (let [k, v] of index) {
         if (v === currentPath) {
           let y = box.getScreenNumber(k)
@@ -715,11 +730,11 @@ module.exports = function start(filename, source, prev = {}) {
     const index = new Map()
     for (let line of fullContent.split('\n')) {
       const path = fullIndex.get(fullNum)
-      console.error('prio[', JSON.stringify(path), '] =', JSON.stringify(priorities.get(path)))
+      //console.error('prio[', JSON.stringify(path), '] =', JSON.stringify(priorities.get(path)))
       if (path !== undefined) {
         const prio = priorities.get(path)
-        if (prio === undefined || showFull || prio < 10 || prio > 25) {
-          content += `${prio.toString().padStart(2, '0')}p ${fullNum.toString().padStart(3, ' ')}: ${line}\n`
+        if (prio === undefined || prio >= priorityThreshold) {
+          content += `${prio.toString().padStart(2, ' ')}p ${fullNum.toString().padStart(3, ' ')}: ${line}\n`
           index.set(num, path)
           num++
         }
