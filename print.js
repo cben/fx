@@ -24,6 +24,7 @@ function print(input, options = {}) {
 
   const { expanded, highlight, currentPath, hidden = new Set(), focus } = options
   const index = new Map()
+  const reverseIndex = new Map()
   const priorities = new Map()
   let row = 0
   let skippedLines = false
@@ -31,6 +32,7 @@ function print(input, options = {}) {
   function doPrint(v, paths = []) {
     const path = paths.join('')
     index.set(row, path)
+    reverseIndex.set(path, row)
 
     priorities.set(path, 0)
 
@@ -172,7 +174,7 @@ function print(input, options = {}) {
     return JSON.stringify(v, null, config.space)
   }
 
-  return [doPrint(input), index, priorities]
+  return [doPrint(input), index, reverseIndex, priorities]
 }
 
 module.exports = print

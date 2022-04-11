@@ -15,8 +15,14 @@ module.exports = function start(filename, source, prev = {}) {
   // Contains map from row number to expand path.
   // Example: {0: '', 1: '.foo', 2: '.foo[0]'}
   let index = new Map()
+  // path to row number: {'': 0, '.foo': 1, '.foo[0]': 2}
+  let reverseIndex = new Map()
   // WIP
   let priorities = new Map()
+  let fullContent = ''
+  let fullIndex = new Map()
+  let fullReverseIndex = new Map()
+
   // TODO fit optimal amount to screen.  For now tweak manually.
   let priorityThreshold = 0
   // WIP fake cursor (in unabridged fullContent lines)
@@ -684,6 +690,10 @@ module.exports = function start(filename, source, prev = {}) {
       }
       render()
 
+      console.error('findNext: focus =', fullReverseIndex.get(currentPath))
+      focus = fullReverseIndex.get(currentPath) // focus points to unabridged line number
+      render()
+
       return // DON'T SCROLL
       for (let [k, v] of index) {
         if (v === currentPath) {
@@ -735,7 +745,7 @@ module.exports = function start(filename, source, prev = {}) {
   // Narrow down to subset of lines based on priorities.
   // For debugging, prepend priorities & line numbers.
   // Returns new [content, index].
-  function abridge(fullContent, fullIndex, priorities) {
+  function abridge(fullContent, fullIndex, fullReverseIndex, priorities) {
     let fullNum = 0
     let prevShownFullNum = 0
     // following vars refer to abridged output
@@ -769,12 +779,11 @@ module.exports = function start(filename, source, prev = {}) {
 
   function render() {
     // Get unabridged pretty-print.
-    let fullContent, fullIndex // do set top-level `priorities` state.
-    [fullContent, fullIndex, priorities] = print(json, { expanded, highlight, currentPath, focus })
+    [fullContent, fullIndex, fullReverseIndex, priorities] = print(json, { expanded, highlight, currentPath, focus })
     
     // Then narrow down to fit available space (TODO).
     let content // do set top-level `index` state.
-    [content, index] = abridge(fullContent, fullIndex, priorities)
+    [content, index] = abridge(fullContent, fullIndex, fullReverseIndex, priorities)
 
     if (typeof content === 'undefined') {
       content = 'undefined'
