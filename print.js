@@ -50,6 +50,21 @@ function print(input, options = {}) {
         priorities.set(ancestor, newAncestorPrio)
       }
     }
+/*
+|
+|
+|+
+|++
+++++
+|++
+|*
+|**
+|***
+*****
+|***
+|**
+|*
+*/
 
     const distFromFocus = Math.abs(row - focus)
     if (distFromFocus <= 10) {
@@ -58,7 +73,7 @@ function print(input, options = {}) {
 
     const isCurrent = currentPath === path
     const bumpPriorityIfMatch = () => {
-      addPrio(isCurrent ? 20 : 10)
+      addPrio(isCurrent ? 8 : 4)
     }
 
     // Code for highlighting parts become cumbersome.
